@@ -28,7 +28,7 @@ export const PasswordField: Story = {
 export const ErrorMessage: Story = {
   args: {
     label: "With Error",
-    helperText: "test error message",
+    helperText: "something went wrong!",
     error: true,
   },
 };
