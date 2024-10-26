@@ -1,0 +1,83 @@
+name: Pull request into develop, main
+
+on:
+  pull_request:
+    branches:
+      - "dev"
+      - "staging"
+      - "main"
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Node modules
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Prettier
+        run: npm run prettier:check
+
+      - name: Jest
+        run: npm run test
+
+      - name: Cypress Component Test
+        run: npm run ct:run
+
+      - name: Cypress E2E Test
+        run: npm run cy:run
+
+      - name: Code Coverage
+        run: npm run report
+
+      - uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          name: Upload reports to codecov
+          fail_ci_if_error: true
+          verbose: true
+
+      - run: |
+          set -e
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          find . -iregex "codecov.*"
+          chmod +x codecov 
+          ./codecov -t ${CODECOV_TOKEN}
+          rm codecov
+
+      # - name: Build Project
+      #   run: npm run build
+
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+
+      # - name: Deploy app build to S3 bucket
+      #   run: |
+      #     if [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
+      #       aws s3 sync ./build s3://talento-bucket --delete
+      #     elif [[ "${{ github.event.pull_request.base.ref }}" == "dev" ]]; then
+      #       aws s3 sync ./build s3://talento-bucket-dev --delete
+      #     fi
+
+      # - name: Invalidate cache on cloudfront distribution
+      #   run: |
+      #     if [[ "${{ github.event.pull_request.base.ref }}" == "main" ]]; then
+      #       aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID }} --paths "/*"
+      #     elif [[ "${{ github.event.pull_request.base.ref }}" == "dev" ]]; then
+      #       aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_DEV_DISTRIBUTION_ID }} --paths "/*"
+      #     fi
